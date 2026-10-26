@@ -1,4 +1,4 @@
-﻿# 洛谷桌面客户端（非官方）
+# 洛谷桌面客户端（非官方）
 
 把洛谷装进一个干净的小窗口：没有地址栏、标签页、书签栏，深色 / 浅色一键切换，窗口还能透出桌面。
 
@@ -23,7 +23,7 @@
 需要 **Windows 10/11**（磨砂效果需要 Windows 11）。
 
 ```powershell
-git clone https://github.com/<your-name>/luogu-client.git
+git clone https://github.com/kaiyuan-123/luogu-client.git
 cd luogu-client
 powershell -ExecutionPolicy Bypass -File .\tools\install.ps1
 ```
