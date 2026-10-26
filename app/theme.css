@@ -1,0 +1,694 @@
+/*!
+ * 洛谷桌面客户端 —— 主题样式
+ *
+ * 深色原理：洛谷新版界面把页面拆成几个互不嵌套的顶层容器：
+ *   .top-bar（固定顶栏）/ nav.sidebar.lside（固定左侧栏）/ .main-container（内容区）
+ *   .modal / .dropdown / .notification-toast-stack（弹层，均在 #app 下与内容区平级）
+ * 每个容器各自加 filter，整块反色，既不破坏 fixed 定位，也能覆盖所有组件。
+ *
+ * 透明原理：窗口本身是透明的（frameless + transparent），
+ * 这里只给“底色”加 alpha，文字/图标完全不动，所以字不会跟着半透明。
+ * 三个 alpha 由 preload 按滑块换算：
+ *   --lgd-a   页面底色（最透）
+ *   --lgd-ac  卡片      （叠在页面底上，实际更实一点，保证正文可读）
+ *   --lgd-ab  顶栏/侧栏
+ * 浅色模式同理，只是换成原来的浅色值。
+ */
+
+html {
+  --lgd-a: 1;
+  --lgd-ac: 1;
+  --lgd-ab: 1;
+}
+
+/* ---------------- 深色：整块反色的根容器 ---------------- */
+
+html[data-lgd="dark"] {
+  background-color: transparent !important;
+  color-scheme: dark;
+}
+
+html[data-lgd="dark"] body {
+  background-color: transparent !important;
+}
+
+html[data-lgd="dark"] .lgd-root {
+  filter: invert(1) hue-rotate(180deg);
+  color-scheme: light;
+}
+
+/* 兜底 1：页面一加载、脚本还没打标时，主容器先按老规则反色，
+   避免“先白闪一下再变黑”。已经在 .lgd-root 里的不再处理，避免反两次 */
+html[data-lgd="dark"] :is(.top-bar, .sidebar, .lside, .rside, .main-container, .main-wrapper, .ide-wrapper):not(.lgd-root):not(.lgd-root *) {
+  filter: invert(1) hue-rotate(180deg);
+  color-scheme: light;
+}
+
+/* 兜底 2：弹层同理 */
+html[data-lgd="dark"] :is(.modal, .dropdown, .notification-toast-stack, #lg-alert, .am-modal):not(.lgd-root):not(.lgd-root *) {
+  filter: invert(1) hue-rotate(180deg);
+  color-scheme: light;
+}
+
+/* 图片、视频、外链框架反两次 = 恢复原样 */
+html[data-lgd="dark"] :is(img, picture, video, canvas, iframe, embed, object) {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* 顶栏 logo 是单色位图，反两次会看不见，这里让它只反一次（变成浅色 logo） */
+html[data-lgd="dark"] .top-bar .logo-link img {
+  filter: invert(1) hue-rotate(180deg) !important;
+}
+
+/* ---------------- 深色：配色（反色前的浅色 + 透明度） ---------------- */
+
+html[data-lgd="dark"] {
+  /* 三档“反色前的浅色”，配合透明度变量使用 */
+  --lgd-page: rgba(232, 234, 238, var(--lgd-a));
+  --lgd-card: rgba(224, 227, 233, var(--lgd-ac));
+  --lgd-bar: rgba(236, 238, 242, var(--lgd-ab));
+  /* 反色后会变成“比卡片亮一档”的细边，用来留住分界线 */
+  --lgd-edge: rgba(0, 0, 0, calc(0.42 * var(--lgd-a)));
+}
+
+html[data-lgd="dark"] .theme-page {
+  /* 底色交给外层 .main-container 铺满，避免只有中间一列有底色、两边是硬边 */
+  --theme-body-back: transparent !important;
+  --theme-body-image: none !important;
+  --theme-body-color: none !important;
+  --theme-body-mid-mask: none !important;
+  /* theme-frosted 主题的卡片底色画在 .l-card::before 上，必须改这个变量 */
+  --theme-card-background: var(--lgd-card) !important;
+}
+
+html[data-lgd="dark"] :is(.l-card, .header-card, .header-layout) {
+  background-color: var(--lgd-card) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, calc(0.5 * var(--lgd-a))) !important;
+}
+
+html[data-lgd="dark"] :is(.top-bar, .lside, .rside) {
+  --theme-navi-back: var(--lgd-bar) !important;
+  background-color: var(--lgd-bar) !important;
+  box-shadow: none !important;
+}
+
+html[data-lgd="dark"] :is(.l-card, .top-bar, .lside, .rside, .list-wrap) {
+  border-color: rgba(210, 214, 221, calc(0.55 * var(--lgd-a))) !important;
+}
+
+/* 首页这类没有 .theme-page 的页面：main 自己就是整页底色，给它加上透明度，
+   否则下面所有块都压在不透明的板上，透不出桌面。
+   放在 .theme-page 里面的 main 不算（那层底色由 .theme-page 负责，避免叠两层）。 */
+/* 页面底色改由窗口本体提供（见 preload 里的 win:bg），这里保持透明，
+   这样滚动条那条槽也能被窗口底色盖住，边框和内容才是同一档透明度 */
+html[data-lgd="dark"] .main-container:not(.l-card),
+html[data-lgd="dark"] .main-wrapper,
+html[data-lgd="dark"] .theme-page:not(.main-container *) {
+  background-color: transparent !important;
+}
+/* main 自己不再画画，底色统一由外面那层容器负责，避免叠两层变得更不透明 */
+html[data-lgd="dark"] main {
+  background-color: transparent !important;
+}
+
+/* 旧版 AmazeUI 的白底块（首页「问题跳转」「近期比赛」「轮播」等）：
+   白底换成本主题的卡片色并带上透明度，再用一圈 1px 细线保留分界 */
+html[data-lgd="dark"] :is(.lg-article, .am-panel, .am-panel-bd, .am-slider, .lg-index-stat, .am-form-field) {
+  background-color: var(--lgd-card) !important;
+  box-shadow: 0 0 0 1px var(--lgd-edge) !important;
+}
+
+/* 代码块保持略实一点（正文要看清），但也别是纯黑一块 */
+html[data-lgd="dark"] :is(pre, code, .lfe-code, .code-container) {
+  /* 反色后比卡片略亮一档，代码块才看得出是“一块” */
+  background-color: rgba(210, 214, 220, var(--lgd-ac)) !important;
+}
+
+/* 输入框也统一成半透明，不然深色页里会是一块死白 */
+html[data-lgd="dark"] :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    textarea,
+    select
+  ) {
+  background-color: var(--lgd-card) !important;
+  border: 1px solid var(--lgd-edge) !important;
+}
+
+/* 旧版 AmazeUI 组件（首页比赛面板、按钮）颜色极饱和，反色后会变成刺眼的荧光色。
+   先降饱和再反色，得到柔和的青蓝 / 粉紫，夜里不刺眼 */
+html[data-lgd="dark"] :is(.am-panel-hd, .am-panel-primary, .am-btn, .am-badge, .am-tag) {
+  filter: saturate(0.5);
+}
+
+/* 弹窗遮罩：原本是半透明黑，反色后会变成半透明白（页面被“提亮”）。
+   这里把它写回半透明白，反色后正好是半透明黑 */
+html[data-lgd="dark"] .modal > .background {
+  background-color: rgba(255, 255, 255, 0.55) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ---------------- 浅色：只给底色加透明度 ---------------- */
+
+html[data-lgd="light"] {
+  background-color: transparent !important;
+}
+
+html[data-lgd="light"] body {
+  background-color: transparent !important;
+}
+
+html[data-lgd="light"] .theme-page {
+  --theme-body-back: transparent !important;
+  --theme-body-image: none !important;
+  --theme-body-color: none !important;
+  --theme-body-mid-mask: none !important;
+  --theme-card-background: rgba(255, 255, 255, var(--lgd-ac)) !important;
+}
+
+html[data-lgd="light"] :is(.l-card, .header-card, .header-layout) {
+  background-color: rgba(255, 255, 255, var(--lgd-ac)) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, calc(0.09 * var(--lgd-a))) !important;
+}
+
+html[data-lgd="light"] :is(.top-bar, .lside, .rside) {
+  --theme-navi-back: rgba(255, 255, 255, var(--lgd-ab)) !important;
+  background-color: rgba(255, 255, 255, var(--lgd-ab)) !important;
+}
+
+html[data-lgd="light"] .main-container:not(.l-card),
+html[data-lgd="light"] .main-wrapper,
+html[data-lgd="light"] .theme-page:not(.main-container *) {
+  background-color: transparent !important;
+}
+html[data-lgd="light"] main {
+  background-color: transparent !important;
+}
+
+html[data-lgd="light"] :is(.lg-article, .am-panel, .am-panel-bd, .am-slider, .lg-index-stat, .am-form-field) {
+  background-color: rgba(255, 255, 255, var(--lgd-ac)) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06) !important;
+}
+
+html[data-lgd="light"] :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    textarea,
+    select
+  ) {
+  background-color: rgba(255, 255, 255, var(--lgd-ac)) !important;
+}
+
+/* 浅色下的代码块同样是实心白，一透就露馅 */
+html[data-lgd="light"] :is(pre, code, .lfe-code, .code-container) {
+  background-color: rgba(243, 245, 248, var(--lgd-ac)) !important;
+}
+
+/* ---------------- 无边框窗口：拖动区域 ---------------- */
+
+/* 借用洛谷顶栏当标题栏；里面的交互元素要挖出来，否则点不动 */
+html.lgd-frameless .top-bar {
+  -webkit-app-region: drag;
+}
+html.lgd-frameless .top-bar :is(a, button, input, label, .user-nav, .breadcrumb, .logo-link) {
+  -webkit-app-region: no-drag;
+}
+
+/* .right 原本是块级元素，直接塞按钮组会掉到第二行，改成横排 */
+html.lgd-frameless .top-bar .right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* ---------------- 顶栏按钮组：主题 / 透明度 / 窗口按钮 ---------------- */
+
+#lgd-toggle.lgd-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  margin: 0 8px 0 0;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: rgba(0, 0, 0, 0.02);
+  color: #40454d;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+#lgd-toggle.lgd-toggle:hover {
+  background: rgba(0, 0, 0, 0.07);
+  border-color: rgba(0, 0, 0, 0.25);
+}
+#lgd-toggle.lgd-toggle svg {
+  display: block;
+  flex: none;
+}
+#lgd-toggle .lgd-icon {
+  display: none;
+}
+#lgd-toggle[data-dark="1"] .lgd-icon--sun,
+#lgd-toggle[data-dark="0"] .lgd-icon--moon {
+  display: block;
+}
+#lgd-toggle .lgd-toggle-text i {
+  font-style: normal;
+  display: none;
+}
+#lgd-toggle[data-dark="1"] .lgd-text-sun,
+#lgd-toggle[data-dark="0"] .lgd-text-moon {
+  display: inline;
+}
+html[data-lgd="dark"] #lgd-toggle.lgd-toggle--bar {
+  filter: invert(1) hue-rotate(180deg);
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(26, 29, 35, 0.8);
+  color: #e3e6ec;
+}
+html[data-lgd="dark"] #lgd-toggle.lgd-toggle--bar:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.36);
+}
+
+#lgd-wincontrols.lgd-wincontrols {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  margin-left: 8px;
+  padding: 2px 4px 2px 6px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  -webkit-app-region: no-drag;
+}
+/* 只有挂在（被反色的）顶栏里时才需要再反一次；悬浮版不参与反色 */
+html[data-lgd="dark"] .top-bar #lgd-wincontrols.lgd-wincontrols {
+  filter: invert(1) hue-rotate(180deg);
+  background: rgba(26, 29, 35, 0.86);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* 没有顶栏的页面（登录页）：按钮组贴在右上角当窗口控件 */
+#lgd-wincontrols.lgd-wincontrols--float {
+  position: fixed;
+  top: 8px;
+  right: 10px;
+  z-index: 2147483000;
+  padding: 2px 6px 2px 2px;
+  border-radius: 9px;
+  border-left: 0;
+  background: rgba(18, 20, 25, 0.62);
+  color: #e6e9ef;
+}
+#lgd-wincontrols.lgd-wincontrols--float .lgd-alpha-icon {
+  color: #b9c1cf;
+}
+#lgd-wincontrols.lgd-wincontrols--float .lgd-wincontrol {
+  color: #e6e9ef;
+}
+#lgd-wincontrols.lgd-wincontrols--float .lgd-wincontrol:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+#lgd-wincontrols.lgd-wincontrols--float input[type="range"]::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, 0.28);
+}
+#lgd-wincontrols.lgd-wincontrols--float input[type="range"]::-webkit-slider-thumb {
+  background: #e6e9ef;
+  border-color: rgba(0, 0, 0, 0.45);
+}
+
+/* 登录页顶部 10px 的隐形拖动条 */
+#lgd-dragstrip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  z-index: 2147482999;
+  background: transparent;
+  -webkit-app-region: drag;
+}
+
+#lgd-wincontrols .lgd-alpha {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 2px;
+  cursor: pointer;
+}
+#lgd-wincontrols .lgd-alpha-icon {
+  display: inline-flex;
+  color: #79818f;
+}
+html[data-lgd="dark"] #lgd-wincontrols .lgd-alpha-icon {
+  color: #aab2c0;
+}
+#lgd-wincontrols input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 70px;
+  height: 16px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+#lgd-wincontrols input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.22);
+}
+#lgd-wincontrols input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: #5f6878;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+html[data-lgd="dark"] .top-bar #lgd-wincontrols input[type="range"]::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, 0.42);
+}
+html[data-lgd="dark"] .top-bar #lgd-wincontrols input[type="range"]::-webkit-slider-thumb {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.5);
+}
+
+#lgd-wincontrols .lgd-wincontrol {
+  width: 28px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #4a5160;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.12s ease;
+}
+#lgd-wincontrols .lgd-wincontrol:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+#lgd-wincontrols .lgd-wincontrol--close:hover {
+  background: #e81123;
+  color: #fff;
+}
+html[data-lgd="dark"] #lgd-wincontrols .lgd-wincontrol {
+  color: #d6dbe4;
+}
+html[data-lgd="dark"] #lgd-wincontrols .lgd-wincontrol:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* 全屏时窗口按钮整条消失 */
+html.lgd-fullscreen #lgd-wincontrols {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  #lgd-wincontrols .lgd-alpha {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  #lgd-toggle .lgd-toggle-text {
+    display: none;
+  }
+}
+
+/* ---------------- 无边框窗口：边缘拖拽调整大小 ---------------- */
+
+#lgd-rz-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482998;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, calc(0.34 * var(--lgd-a) + 0.1)),
+    inset 0 0 16px rgba(0, 0, 0, calc(0.1 * var(--lgd-a)));
+  border-radius: 1px;
+}
+html[data-lgd="dark"] #lgd-rz-wrap {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, calc(0.3 * var(--lgd-a) + 0.08)),
+    inset 0 0 18px rgba(0, 0, 0, calc(0.2 * var(--lgd-a)));
+}
+#lgd-rz-wrap .lgd-rz {
+  position: absolute;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  background: transparent;
+}
+.lgd-rz--n { top: 0; left: 10px; right: 10px; height: 4px; cursor: ns-resize; }
+.lgd-rz--s { bottom: 0; left: 10px; right: 10px; height: 4px; cursor: ns-resize; }
+.lgd-rz--w { left: 0; top: 10px; bottom: 10px; width: 4px; cursor: ew-resize; }
+.lgd-rz--e { right: 0; top: 10px; bottom: 10px; width: 4px; cursor: ew-resize; }
+.lgd-rz--nw { top: 0; left: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+.lgd-rz--ne { top: 0; right: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+.lgd-rz--sw { bottom: 0; left: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+.lgd-rz--se { bottom: 0; right: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+
+html.lgd-maximized #lgd-rz-wrap,
+html.lgd-fullscreen #lgd-rz-wrap {
+  display: none;
+}
+/* ---------------- 滚动条：跟页面一起半透明 ---------------- */
+
+html.lgd-frameless ::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  background: transparent !important;
+}
+html.lgd-frameless ::-webkit-scrollbar-track,
+html.lgd-frameless ::-webkit-scrollbar-track-piece,
+html.lgd-frameless ::-webkit-scrollbar-corner {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+/* 文档滚动条自带一条 8px 的槽，槽是浏览器画的、不在页面里，
+   不单独上色就会留下一条完全透明的缝，看起来像贴了个边框。
+   这里把它调成和页面同色同透明度，槽和内容就接上了。 */
+html.lgd-frameless::-webkit-scrollbar {
+  width: 8px;
+  background: rgba(19, 21, 26, var(--lgd-a)) !important;
+}
+html.lgd-frameless::-webkit-scrollbar-track,
+html.lgd-frameless::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  border: 0 !important;
+}
+html.lgd-frameless::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, calc(0.34 * var(--lgd-a))) !important;
+  border-radius: 8px !important;
+  border: 0 !important;
+}
+html[data-lgd="light"].lgd-frameless::-webkit-scrollbar {
+  background: rgba(239, 239, 239, var(--lgd-a)) !important;
+}
+html[data-lgd="light"].lgd-frameless::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, calc(0.3 * var(--lgd-a))) !important;
+}
+/* 滑块也跟着透明度变淡，窗口右边才不会像贴了一条实心边框 */
+html[data-lgd="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, calc(0.34 * var(--lgd-a))) !important;
+  border-radius: 8px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+html[data-lgd="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, calc(0.55 * var(--lgd-a))) !important;
+}
+html[data-lgd="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, calc(0.3 * var(--lgd-a))) !important;
+  border-radius: 8px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+html[data-lgd="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, calc(0.5 * var(--lgd-a))) !important;
+}
+/* 原生滚动条在透明窗口里画不出“同色同透明度”的槽，右边会留一条透明缝。
+   干脆隐藏原生滚动条，用一条自绘的细指示条代替（滚轮/键盘/拖动照常）。 */
+html.lgd-frameless {
+  scrollbar-width: none;
+}
+html.lgd-frameless::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+#lgd-scrollbar {
+  position: fixed;
+  right: 2px;
+  top: 0;
+  width: 3px;
+  border-radius: 3px;
+  z-index: 2147482500;
+  pointer-events: none;
+  background: rgba(230, 235, 245, calc(0.42 * var(--lgd-a)));
+  transition: background-color 0.2s ease;
+}
+html[data-lgd="light"] #lgd-scrollbar {
+  background: rgba(40, 46, 56, calc(0.38 * var(--lgd-a)));
+}
+/* ---------------- 磨砂 / 纯透明 切换菜单 ---------------- */
+
+#lgd-frost-btn {
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 2px;
+  margin-left: -2px;
+}
+#lgd-frost-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+html[data-lgd="dark"] #lgd-frost-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+html[data-lgd-frost="frost"] #lgd-frost-btn {
+  box-shadow: 0 0 0 1px currentColor inset;
+  opacity: 0.95;
+}
+
+#lgd-frost-menu {
+  position: fixed;
+  z-index: 2147483000;
+  min-width: 178px;
+  padding: 6px;
+  border-radius: 11px;
+  background: rgba(24, 27, 33, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: #e6e9ef;
+}
+#lgd-frost-menu[hidden] {
+  display: none;
+}
+#lgd-frost-menu button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.35;
+}
+#lgd-frost-menu button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+#lgd-frost-menu button b {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+#lgd-frost-menu button span {
+  color: #99a2b0;
+  font-size: 11px;
+}
+#lgd-frost-menu button.is-on {
+  background: rgba(60, 130, 246, 0.24);
+}
+#lgd-frost-menu button.is-on b::after {
+  content: "  ✓";
+  color: #7fb0ff;
+}
+
+html[data-lgd="light"] #lgd-frost-menu {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #2a2f38;
+}
+html[data-lgd="light"] #lgd-frost-menu button:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+html[data-lgd="light"] #lgd-frost-menu button span {
+  color: #6b7380;
+}
+html[data-lgd="light"] #lgd-frost-menu button.is-on {
+  background: rgba(31, 111, 235, 0.12);
+}
+html[data-lgd="light"] #lgd-frost-menu button.is-on b::after {
+  color: #1f6feb;
+}
+/* 纯透明模式下桌面是清晰的，窗口边缘容易糊进桌面：用“白线 + 暗线”双层描边，
+   不管背后是亮壁纸还是暗窗口都看得见边界 */
+html[data-lgd-frost="clear"] #lgd-rz-wrap {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, calc(0.38 * var(--lgd-a) + 0.12)),
+    inset 0 0 0 2px rgba(0, 0, 0, calc(0.28 * var(--lgd-a) + 0.08)),
+    inset 0 0 22px rgba(0, 0, 0, calc(0.14 * var(--lgd-a)));
+}
+html[data-lgd="light"][data-lgd-frost="clear"] #lgd-rz-wrap {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, calc(0.3 * var(--lgd-a) + 0.1)),
+    inset 0 0 0 2px rgba(255, 255, 255, calc(0.5 * var(--lgd-a) + 0.1)),
+    inset 0 0 20px rgba(0, 0, 0, calc(0.08 * var(--lgd-a)));
+}
+/* ---------------- 左上角：后退 / 刷新 / 前进 ---------------- */
+
+#lgd-navbar.lgd-navbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  margin-right: 8px;
+  padding: 2px 3px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  -webkit-app-region: no-drag;
+}
+html[data-lgd="dark"] .top-bar #lgd-navbar.lgd-navbar {
+  filter: invert(1) hue-rotate(180deg);
+  background: rgba(26, 29, 35, 0.86);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+}
+
+#lgd-navbar .lgd-navbtn {
+  width: 27px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #4a5160;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.12s ease, opacity 0.12s ease;
+}
+#lgd-navbar .lgd-navbtn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+#lgd-navbar .lgd-navbtn:active {
+  background: rgba(0, 0, 0, 0.14);
+}
+#lgd-navbar .lgd-navbtn[disabled] {
+  opacity: 0.28;
+  cursor: default;
+  background: transparent;
+}
+html[data-lgd="dark"] #lgd-navbar .lgd-navbtn {
+  color: #d6dbe4;
+}
+html[data-lgd="dark"] #lgd-navbar .lgd-navbtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+html[data-lgd="dark"] #lgd-navbar .lgd-navbtn:active {
+  background: rgba(255, 255, 255, 0.22);
+}

@@ -1,0 +1,17 @@
+# 运行时（由 install.ps1 下载，不要提交）
+electron/
+node_modules/
+*.zip
+
+# 用户数据：登录态、缓存、窗口位置
+数据/
+窗口.json
+
+# 系统文件
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# 打包产物
+dist/
+out/
