@@ -12,7 +12,7 @@
  *   · 所有数据（登录态、缓存）都留在  D:\LuoguClient\数据
  */
 
-const { app, BrowserWindow, Menu, shell, session, clipboard, ipcMain, nativeTheme } = require('electron');
+const { app, BrowserWindow, Menu, shell, session, clipboard, ipcMain, nativeTheme, screen } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -497,6 +497,7 @@ function installWindowIpc() {
   });
   ipcMain.on('win:set-bounds', (_event, b) => {
     if (!mainWindow || mainWindow.isDestroyed() || !b) return;
+    if (fullScreenState) return; // 全屏时不允许拖边改尺寸
     const cur = mainWindow.getBounds();
     const width = Math.max(960, Math.round(b.width || cur.width));
     const height = Math.max(620, Math.round(b.height || cur.height));
@@ -525,12 +526,16 @@ let mainWindow = null;
 let fullScreenState = false;
 
 let fsBusy = false;
+// 全屏切换后的这段时间里，窗口尺寸会在“全屏尺寸”和“普通尺寸”之间来回跳，
+// 这时候的 resize 事件绝不能写进窗口.json，否则会把奇怪的中间尺寸存下来
+let fsChangedAt = 0;
 
 function setFullScreen(on) {
   if (!mainWindow || mainWindow.isDestroyed() || fsBusy) return;
   const next = !!on;
   if (next === fullScreenState) return;
   fsBusy = true;
+  fsChangedAt = Date.now();
   mainWindow.setFullScreen(next);
   fullScreenState = next;
   setTimeout(() => {
@@ -547,11 +552,26 @@ function setFullScreen(on) {
 function createWindow() {
   const st = readState();
 
+  const area = screen.getPrimaryDisplay().workAreaSize;
+  const defW = Math.min(1560, Math.max(1200, area.width - 260));
+  const defH = Math.min(920, Math.max(760, area.height - 160));
+  let winW = Number(st.width) || 0;
+  let winH = Number(st.height) || 0;
+  // 尺寸异常（被写坏、或者换了显示器）就回退到默认值
+  if (winW < 1100 || winH < 700 || winW > area.width || winH > area.height) {
+    winW = defW;
+    winH = defH;
+  }
+  let winX = typeof st.x === 'number' ? st.x : undefined;
+  let winY = typeof st.y === 'number' ? st.y : undefined;
+  if (winX !== undefined && (winX < -winW + 120 || winX > area.width - 120)) winX = undefined;
+  if (winY !== undefined && (winY < -20 || winY > area.height - 120)) winY = undefined;
+
   mainWindow = new BrowserWindow({
-    width: st.width || 1440,
-    height: st.height || 920,
-    x: typeof st.x === 'number' ? st.x : undefined,
-    y: typeof st.y === 'number' ? st.y : undefined,
+    width: winW,
+    height: winH,
+    x: winX,
+    y: winY,
     minWidth: 960,
     minHeight: 620,
     show: false,
@@ -576,6 +596,21 @@ function createWindow() {
 
   Menu.setApplicationMenu(null);
 
+  // 缩放只由 Ctrl +/- 控制；禁掉触摸板捏合缩放，避免不小心把整页缩成 58%
+  try {
+    mainWindow.webContents.setVisualZoomLevelLimits(1, 1);
+  } catch (e) {
+    /* 忽略 */
+  }
+  // 每次加载完都把缩放归位，防止上一次的缩放（或捏合）被带进新页面
+  mainWindow.webContents.on('did-finish-load', () => {
+    try {
+      mainWindow.webContents.setZoomLevel(0);
+    } catch (e) {
+      /* 忽略 */
+    }
+  });
+
   if (st.maximized) mainWindow.maximize();
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
@@ -589,8 +624,16 @@ function createWindow() {
 
   const saveBounds = () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (Date.now() - fsChangedAt < 1200) return; // 全屏切换过渡期不记尺寸
     const maximized = mainWindow.isMaximized();
-    if (!maximized && !fullScreenState) {
+    let isFs = fullScreenState;
+    try {
+      isFs = isFs || mainWindow.isFullScreen();
+    } catch (e) {
+      /* 忽略 */
+    }
+    if (isFs) return;
+    if (!maximized) {
       const b = mainWindow.getBounds();
       writeState({ width: b.width, height: b.height, x: b.x, y: b.y });
     }
