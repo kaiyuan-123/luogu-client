@@ -151,9 +151,9 @@ function syncSlider() {
 
 /* 让被“批量透明化”接管过的元素跟着滑块一起变 */
 function refreshSwept(alpha) {
+  // 现在"小框框"内部一律全透明，只靠描边区分层次，所以这里只需要维持透明
   for (const el of document.querySelectorAll('[data-lgd-swept="1"]')) {
-    const rgb = el.dataset.lgdRgb;
-    if (rgb) el.style.setProperty('background-color', 'rgba(' + rgb + ', ' + alpha + ')', 'important');
+    el.style.setProperty('background-color', 'transparent', 'important');
   }
 }
 
@@ -209,6 +209,7 @@ const SWEEP_SKIP_TAGS = {
 
 let sweepTimer = 0;
 let sweeping = false;
+let sweepStartedAt = 0;
 
 function scheduleSweep(delay) {
   if (currentTransparency < 0.03) return;
@@ -227,8 +228,14 @@ function parseColor(s) {
 }
 
 function runSweep() {
-  if (!document.body || sweeping || currentTransparency < 0.03) return;
+  if (!document.body || currentTransparency < 0.03) return;
+  if (sweeping) {
+    // 看门狗：上一次扫描如果卡住（异常/页面太忙），4 秒后强制放行，否则再也不会扫
+    if (Date.now() - sweepStartedAt < 4000) return;
+    sweeping = false;
+  }
   sweeping = true;
+  sweepStartedAt = Date.now();
   const alpha = 1 - currentTransparency;
   const all = document.body.querySelectorAll('*');
   let i = 0;
@@ -260,7 +267,13 @@ function runSweep() {
       const rgb = c.r + ',' + c.g + ',' + c.b;
       el.dataset.lgdSwept = '1';
       el.dataset.lgdRgb = rgb;
-      el.style.setProperty('background-color', 'rgba(' + rgb + ', ' + alpha + ')', 'important');
+      // 框内部全透明，只补一圈 1px 描边，和卡片保持同一种语言
+      el.style.setProperty('background-color', 'transparent', 'important');
+      if (el.dataset.lgdEdge !== '1') {
+        el.dataset.lgdEdge = '1';
+        el.style.setProperty('outline', '1px solid var(--lgd-edge)', 'important');
+        el.style.setProperty('outline-offset', '-1px', 'important');
+      }
     }
     if (i < all.length) {
       if (typeof requestIdleCallback === 'function') requestIdleCallback(chunk, { timeout: 400 });

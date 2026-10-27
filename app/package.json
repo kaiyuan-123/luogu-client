@@ -1,7 +1,7 @@
 {
   "name": "luogu-desktop-client",
   "productName": "洛谷",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "洛谷桌面客户端：无边框透明窗口 + 深色模式 + 纯透明/磨砂切换",
   "main": "main.js",
   "private": true

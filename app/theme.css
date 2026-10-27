@@ -78,11 +78,12 @@ html[data-lgd="dark"] .theme-page {
   --theme-body-color: none !important;
   --theme-body-mid-mask: none !important;
   /* theme-frosted 主题的卡片底色画在 .l-card::before 上，必须改这个变量 */
-  --theme-card-background: var(--lgd-card) !important;
+  --theme-card-background: transparent !important;
 }
 
+/* 站内的"小框框"内部一律全透明，只描一圈边（用户要的效果） */
 html[data-lgd="dark"] :is(.l-card, .header-card, .header-layout) {
-  background-color: var(--lgd-card) !important;
+  background-color: transparent !important;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, calc(0.5 * var(--lgd-a))) !important;
 }
 
@@ -114,7 +115,7 @@ html[data-lgd="dark"] main {
 /* 旧版 AmazeUI 的白底块（首页「问题跳转」「近期比赛」「轮播」等）：
    白底换成本主题的卡片色并带上透明度，再用一圈 1px 细线保留分界 */
 html[data-lgd="dark"] :is(.lg-article, .am-panel, .am-panel-bd, .am-slider, .lg-index-stat, .am-form-field) {
-  background-color: var(--lgd-card) !important;
+  background-color: transparent !important;
   box-shadow: 0 0 0 1px var(--lgd-edge) !important;
 }
 
@@ -130,7 +131,7 @@ html[data-lgd="dark"] :is(
     textarea,
     select
   ) {
-  background-color: var(--lgd-card) !important;
+  background-color: transparent !important;
   border: 1px solid var(--lgd-edge) !important;
 }
 
@@ -163,12 +164,12 @@ html[data-lgd="light"] .theme-page {
   --theme-body-image: none !important;
   --theme-body-color: none !important;
   --theme-body-mid-mask: none !important;
-  --theme-card-background: rgba(255, 255, 255, var(--lgd-ac)) !important;
+  --theme-card-background: transparent !important;
 }
 
 html[data-lgd="light"] :is(.l-card, .header-card, .header-layout) {
-  background-color: rgba(255, 255, 255, var(--lgd-ac)) !important;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, calc(0.09 * var(--lgd-a))) !important;
+  background-color: transparent !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, calc(0.12 * var(--lgd-a))) !important;
 }
 
 html[data-lgd="light"] :is(.top-bar, .lside, .rside) {
@@ -186,8 +187,8 @@ html[data-lgd="light"] main {
 }
 
 html[data-lgd="light"] :is(.lg-article, .am-panel, .am-panel-bd, .am-slider, .lg-index-stat, .am-form-field) {
-  background-color: rgba(255, 255, 255, var(--lgd-ac)) !important;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06) !important;
+  background-color: transparent !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, calc(0.1 * var(--lgd-a))) !important;
 }
 
 html[data-lgd="light"] :is(
@@ -195,7 +196,8 @@ html[data-lgd="light"] :is(
     textarea,
     select
   ) {
-  background-color: rgba(255, 255, 255, var(--lgd-ac)) !important;
+  background-color: transparent !important;
+  border: 1px solid rgba(0, 0, 0, calc(0.14 * var(--lgd-a))) !important;
 }
 
 /* 浅色下的代码块同样是实心白，一透就露馅 */
@@ -433,13 +435,13 @@ html.lgd-fullscreen #lgd-wincontrols {
   inset: 0;
   z-index: 2147482998;
   pointer-events: none;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, calc(0.34 * var(--lgd-a) + 0.1)),
-    inset 0 0 16px rgba(0, 0, 0, calc(0.1 * var(--lgd-a)));
+  /* 只留一层 1px 描边，颜色就是"页面底色"本身（只是更实一点），
+     避免出现一条和内部不同色调的线 */
+  box-shadow: inset 0 0 0 1px rgba(239, 239, 239, 0.85);
   border-radius: 1px;
 }
 html[data-lgd="dark"] #lgd-rz-wrap {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, calc(0.3 * var(--lgd-a) + 0.08)),
-    inset 0 0 18px rgba(0, 0, 0, calc(0.2 * var(--lgd-a)));
+  box-shadow: inset 0 0 0 1px rgba(19, 21, 26, 0.88);
 }
 #lgd-rz-wrap .lgd-rz {
   position: absolute;
@@ -628,16 +630,7 @@ html[data-lgd="light"] #lgd-frost-menu button.is-on b::after {
 }
 /* 纯透明模式下桌面是清晰的，窗口边缘容易糊进桌面：用“白线 + 暗线”双层描边，
    不管背后是亮壁纸还是暗窗口都看得见边界 */
-html[data-lgd-frost="clear"] #lgd-rz-wrap {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, calc(0.38 * var(--lgd-a) + 0.12)),
-    inset 0 0 0 2px rgba(0, 0, 0, calc(0.28 * var(--lgd-a) + 0.08)),
-    inset 0 0 22px rgba(0, 0, 0, calc(0.14 * var(--lgd-a)));
-}
-html[data-lgd="light"][data-lgd-frost="clear"] #lgd-rz-wrap {
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, calc(0.3 * var(--lgd-a) + 0.1)),
-    inset 0 0 0 2px rgba(255, 255, 255, calc(0.5 * var(--lgd-a) + 0.1)),
-    inset 0 0 20px rgba(0, 0, 0, calc(0.08 * var(--lgd-a)));
-}
+/* 纯透明模式不再额外叠描边层，和磨砂用同一条线 */
 /* ---------------- 左上角：后退 / 刷新 / 前进 ---------------- */
 
 #lgd-navbar.lgd-navbar {
@@ -698,4 +691,39 @@ html[data-lgd="dark"] #lgd-navbar .lgd-navbtn:active {
 html[data-lgd="dark"] .swal2-container :is(img, canvas, video),
 html[data-lgd="dark"] :is(#--swal-retry-icaptcha, [class*="yidun"], [id*="yidun"], [class*="NECaptcha"]):is(img, canvas) {
   filter: none !important;
+}
+/* IDE 页面（#ide）：整块面板的底色默认是纯白，等兜底扫描太慢，
+   进页面会先看到一整块黑（深色）/白（浅色）的底，这里直接按透明度上色 */
+html[data-lgd] #app .panel-layout,
+html[data-lgd] .main-container .panel-layout,
+html[data-lgd] #app .ide-container {
+  background-color: transparent !important;
+  box-shadow: inset 0 0 0 1px var(--lgd-edge);
+}
+html[data-lgd] #app .panel-layout .panel,
+html[data-lgd] #app .panel-layout .panel-body {
+  background-color: transparent !important;
+}
+/* IDE 编辑器的行号槽 / 工具栏底色也一并透明 */
+html[data-lgd] .cm-gutters {
+  background-color: transparent !important;
+  border-right: 1px solid var(--lgd-edge) !important;
+}
+html[data-lgd] :is(.panel-head, .panel-header, .panel-toolbar, .ide-toolbar) {
+  background-color: transparent !important;
+}
+/* IDE：面板之间的分割条 / 语言选择器外框，原色是浅灰，反色后变成黑条 */
+html[data-lgd] :is(.panel-divider, .panel-divider.with-icon) {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-left: 1px solid var(--lgd-edge) !important;
+}
+html[data-lgd] .combo-wrapper .text,
+html[data-lgd] .combo-wrapper .arrow {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+html[data-lgd] .combo-wrapper .text {
+  border: 1px solid var(--lgd-edge) !important;
+  box-shadow: none !important;
 }
