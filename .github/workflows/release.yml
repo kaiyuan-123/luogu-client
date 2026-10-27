@@ -1,0 +1,67 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  ELECTRON_VERSION: "45.0.0"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Electron
+        shell: pwsh
+        run: |
+          $v = "${{ env.ELECTRON_VERSION }}"
+          $urls = @(
+            "https://cdn.npmmirror.com/binaries/electron/$v/electron-v$v-win32-x64.zip",
+            "https://github.com/electron/electron/releases/download/v$v/electron-v$v-win32-x64.zip"
+          )
+          $ok = $false
+          foreach ($u in $urls) {
+            try {
+              Write-Host "downloading $u"
+              Invoke-WebRequest -Uri $u -OutFile electron.zip -UseBasicParsing -TimeoutSec 900
+              $ok = $true
+              break
+            } catch {
+              Write-Warning "failed: $($_.Exception.Message)"
+            }
+          }
+          if (-not $ok) { throw "electron download failed" }
+          Get-Item electron.zip | Select-Object Name, Length
+
+      - name: Assemble portable package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/app, dist/electron | Out-Null
+          Copy-Item app/* dist/app -Recurse -Force
+          Copy-Item app/config.json dist/app -Force
+          Expand-Archive electron.zip -DestinationPath dist/electron -Force
+          Copy-Item tools/launcher.vbs "dist/启动洛谷.vbs" -Force
+          Copy-Item tools/readme-portable.txt "dist/说明.txt" -Force
+          Remove-Item electron.zip -Force
+
+          $version = (Get-Content app/package.json -Raw | ConvertFrom-Json).version
+          Write-Host "packaging v$version"
+
+          Compress-Archive -Path dist/app, dist/electron, "dist/启动洛谷.vbs", "dist/说明.txt" `
+            -DestinationPath luogu-client-win64.zip -CompressionLevel Optimal -Force
+          Get-Item luogu-client-win64.zip | Select-Object Name, @{n = "MB"; e = { [math]::Round($_.Length / 1MB, 1) } }
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: luogu-client-win64.zip
+          generate_release_notes: true
+          draft: false

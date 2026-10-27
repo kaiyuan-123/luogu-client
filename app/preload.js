@@ -290,6 +290,7 @@ const ICON = {
   back: SVG('<path d="M10 3.5L5.5 8l4.5 4.5"/>'),
   forward: SVG('<path d="M6 3.5L10.5 8 6 12.5"/>'),
   reload: SVG('<path d="M13 8a5 5 0 1 1-1.6-3.7"/><path d="M13 2.8V5.6h-2.8"/>'),
+  framed: SVG('<path d="M7 3H3v10h10v-4"/><path d="M9 3h4v3"/><path d="M13 3l-5 5"/>'),
 };
 
 /* ------------------------------------------------------- 顶栏：主题按钮 */
@@ -451,6 +452,7 @@ function buildCluster() {
     return b;
   };
 
+  mk('lgd-frame', 'framed', ICON.framed, '用提交窗口打开（验证码用）');
   mk('lgd-fs', 'fullscreen', ICON.fullscreen, '全屏 (F11)');
   mk('lgd-min', 'minimize', ICON.minimize, '最小化 (Ctrl+M)');
   mk('lgd-max', 'maximize', ICON.maximize, '最大化');
@@ -529,6 +531,27 @@ function mountNavbar() {
   const left = document.querySelector('.top-bar .left');
   if (!left || !left.parentElement) return;
   left.insertBefore(buildNavbar(), left.firstChild);
+}
+
+let toastTimer = 0;
+function showToast(text) {
+  let el = document.getElementById('lgd-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'lgd-toast';
+    el.style.cssText =
+      'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:2147483001;' +
+      'padding:10px 18px;border-radius:10px;background:rgba(16,18,26,.9);color:#e8eefc;' +
+      'font:14px/1.5 "Microsoft YaHei",sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.35);' +
+      'pointer-events:none;transition:opacity .25s ease;opacity:0;';
+    (document.body || document.documentElement).appendChild(el);
+  }
+  el.textContent = text;
+  el.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.style.opacity = '0';
+  }, 3800);
 }
 
 function applyNavState(state) {
@@ -904,6 +927,27 @@ document.addEventListener(
     const t = e.target;
     if (!t || !t.closest) return;
 
+    // 提交评测 / IDE 里的「提交」→ 转交浏览器（验证码只在真浏览器里能过）
+    const submitBtn = t.closest('button');
+    const ideSubmit = t.closest('a.title');
+    const isSubmitClick =
+      (submitBtn && /^\s*提交评测/.test(submitBtn.textContent || '')) ||
+      (ideSubmit && (ideSubmit.textContent || '').trim() === '提交');
+    if (isSubmitClick) {
+      const editor = document.querySelector('.cm-content');
+      const code = editor ? editor.innerText.trim() : '';
+      if (code) {
+        e.preventDefault();
+        e.stopPropagation();
+        ipcRenderer.send('win:submit-browser', {
+          url: location.href.split('#')[0] + '#submit',
+          code: code,
+        });
+        showToast('代码已复制，在浏览器窗口里 Ctrl+V 粘贴后提交');
+        return;
+      }
+    }
+
     if (t.closest('#lgd-toggle')) {
       e.preventDefault();
       e.stopPropagation();
@@ -933,7 +977,8 @@ document.addEventListener(
     e.preventDefault();
     e.stopPropagation();
     const a = act.dataset.lgdAction;
-    if (a === 'fullscreen') ipcRenderer.send('win:fullscreen', true);
+    if (a === 'framed') ipcRenderer.send('win:open-framed', location.href);
+    else if (a === 'fullscreen') ipcRenderer.send('win:fullscreen', true);
     else if (a === 'minimize') ipcRenderer.send('win:minimize');
     else if (a === 'maximize') ipcRenderer.send('win:maximize');
     else if (a === 'close') ipcRenderer.send('win:close');

@@ -692,3 +692,10 @@ html[data-lgd="dark"] #lgd-navbar .lgd-navbtn:hover {
 html[data-lgd="dark"] #lgd-navbar .lgd-navbtn:active {
   background: rgba(255, 255, 255, 0.22);
 }
+/* 人机验证的弹窗（SweetAlert / 易盾）挂在 body 上，不属于 .lgd-root，
+   深色模式下别把里面的图片再反一次色 —— 反了以后 3D 字母的明暗会翻转，
+   判断"朝向"会出错，验证码就总被判错 */
+html[data-lgd="dark"] .swal2-container :is(img, canvas, video),
+html[data-lgd="dark"] :is(#--swal-retry-icaptcha, [class*="yidun"], [id*="yidun"], [class*="NECaptcha"]):is(img, canvas) {
+  filter: none !important;
+}
